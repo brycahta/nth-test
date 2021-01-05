@@ -1,7 +1,7 @@
 VERSION = $(shell git describe --tags --always --dirty)
 LATEST_RELEASE_TAG=$(shell git describe --tags --abbrev=0)
 PREVIOUS_RELEASE_TAG=$(shell git describe --abbrev=0 --tags `git rev-list --tags --skip=1  --max-count=1`)
-REPO_FULL_NAME=aws/aws-node-termination-handler
+REPO_FULL_NAME=brycahta/nth-test
 ECR_REGISTRY ?= public.ecr.aws/aws-ec2
 ECR_REPO ?= ${ECR_REGISTRY}/aws-node-termination-handler
 IMG ?= amazon/aws-node-termination-handler
@@ -145,9 +145,9 @@ helm-tests: helm-version-sync-test helm-lint helm-validate-eks-versions
 eks-cluster-test:
 	${MAKEFILE_PATH}/test/eks-cluster-test/run-test
 
-release: build-binaries build-docker-images push-docker-images generate-k8s-yaml upload-resources-to-github
+release: build-binaries build-docker-images generate-k8s-yaml upload-resources-to-github
 
-release-windows: build-binaries-windows build-docker-images-windows push-docker-images-windows upload-resources-to-github-windows
+release-windows: build-binaries-windows build-docker-images-windows upload-resources-to-github-windows
 
 test: spellcheck shellcheck unit-test e2e-test compatibility-test license-test go-report-card-test helm-sync-test helm-version-sync-test helm-lint
 
