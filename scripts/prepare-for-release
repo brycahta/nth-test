@@ -201,6 +201,8 @@ update_versions() {
 
 commit_changes() {
     echo -e "\n🥑 Adding and committing release version changes."
+    git config user.name "ec2-bot 🤖"
+    git config user.email "ec2-bot@users.noreply.github.com"
     git add "${FILES_CHANGED[@]}"
     git commit -m "$COMMIT_MESSAGE"
     echo -e "✅✅✅ ${BOLD}Committed release prep changes to new branch $NEW_BRANCH with commit message '$COMMIT_MESSAGE'\n\n${RESET_FMT}"
