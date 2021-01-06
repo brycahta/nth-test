@@ -8,14 +8,20 @@
 
 set -euo pipefail
 
+set -x
 REPO_ROOT_PATH="$( cd "$(dirname "$0")"; cd ../; pwd -P )"
 MAKEFILE_PATH=$REPO_ROOT_PATH/Makefile
 LATEST_VERSION=$(make -s -f $MAKEFILE_PATH latest-release-tag | cut -b 2- )
 PREVIOUS_VERSION=$(make -s -f $MAKEFILE_PATH previous-release-tag | cut -b 2- )
+MAJOR_INC=false
+MINOR_INC=false
+PATCH_INC=false
 
 # files with versions, to update
 REPO_README=$REPO_ROOT_PATH/README.md
 CHART=$REPO_ROOT_PATH/config/helm/aws-node-termination-handler/Chart.yaml
+CURR_CHART_VERSION=$(cat $CHART | grep 'version:' | xargs | cut -d' ' -f2 | tr -d '[:space:]')
+UPDATED_CHART_VERSION=""
 CHART_VALUES=$REPO_ROOT_PATH/config/helm/aws-node-termination-handler/values.yaml
 # ReadMe will be updated post-release due to long NTH release time
 FILES=("$CHART" "$CHART_VALUES")
@@ -98,6 +104,51 @@ MAGENTA=$(tput setaf 5)
 RESET_FMT=$(tput sgr 0)
 BOLD=$(tput bold)
 
+
+determine_inc() {
+  prev=$1
+  updated=$2
+
+  prev_major_v=$(echo $prev | tr '.' '\n' | head -1)
+  prev_minor_v=$(echo $prev | tr '.' '\n' | head -2 | tail -1)
+  prev_patch_v=$(echo $prev | tr '.' '\n' | tail -1)
+  curr_major_v=$(echo $updated | tr '.' '\n' | head -1)
+  curr_minor_v=$(echo $updated | tr '.' '\n' | head -2 | tail -1)
+  curr_patch_v=$(echo $updated | tr '.' '\n' | tail -1)
+
+  if [[ "$prev_major_v" -ne "$curr_major_v" ]]; then
+    MAJOR_INC=true
+  elif [[ "$prev_minor_v" -ne "$curr_minor_v" ]]; then
+    MINOR_INC=true
+  elif [[ "$prev_patch_v" -ne "$curr_patch_v" ]]; then
+    PATCH_INC=true
+  fi
+
+  echo "$MAJOR_INC"
+  echo "$MINOR_INC"
+  echo "$PATCH_INC"
+}
+
+increment_chart() {
+  curr_chart_version=$1
+  curr_major_v=$(echo $curr_chart_version | tr '.' '\n' | head -1)
+  curr_minor_v=$(echo $curr_chart_version | tr '.' '\n' | head -2 | tail -1)
+  curr_patch_v=$(echo $curr_chart_version | tr '.' '\n' | tail -1)
+
+  if [[ $MAJOR_INC == true ]]; then
+      new_major_v=$(echo $(($curr_major_v + 1)))
+      UPDATED_CHART_VERSION=$(echo $new_major_v.0.0)
+  elif [[ $MINOR_INC == true ]]; then
+      new_minor_v=$(echo $(($curr_minor_v + 1)))
+      UPDATED_CHART_VERSION=$(echo $curr_major_v.$new_minor_v.0)
+  elif [[ $PATCH_INC == true ]]; then
+      new_patch_v=$(echo $(($curr_patch_v + 1)))
+      UPDATED_CHART_VERSION=$(echo $curr_major_v.$curr_minor_v.$new_patch_v)
+  fi
+
+  echo $UPDATED_CHART_VERSION
+}
+
 # verify origin tracking before creating and pushing new branches
 verify_origin_tracking() {
     origin=$(git remote get-url origin 2>&1) || true
@@ -123,12 +174,15 @@ create_release_branch() {
 update_versions() {
     # update release version for release prep
     echo -e "🥑 Attempting to update NTH release version in preparation for a new release."
+    UPDATED_CHART_VERSION=$(increment_chart $CURR_CHART_VERSION)
 
     for f in "${FILES[@]}"; do
         # do not exit if grep doesn't find $PREVIOUS_VERSION; continue to exit on all other exit codes
         has_incorrect_version=$(cat $f | grep $PREVIOUS_VERSION || [[ $? == 1 ]])
-        if [[ ! -z  $has_incorrect_version ]]; then
+        chart_should_increment=$(cat $f | grep $CURR_CHART_VERSION || [[ $? == 1 ]])
+        if [[ ! -z  $has_incorrect_version ]] || [[ ! -z  $chart_should_increment ]]; then
             sed -i '' "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
+            sed -i '' "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" $f
             FILES_CHANGED+=("$f")
         fi
     done
@@ -145,7 +199,7 @@ update_versions() {
 commit_changes() {
     echo -e "\n🥑 Adding and committing release version changes."
     git add "${FILES_CHANGED[@]}"
-    git commit -m"$COMMIT_MESSAGE"
+    git commit -m "$COMMIT_MESSAGE"
     echo -e "✅✅✅ ${BOLD}Committed release prep changes to new branch $NEW_BRANCH with commit message '$COMMIT_MESSAGE'\n\n${RESET_FMT}"
 }
 
@@ -236,6 +290,15 @@ main() {
 
     verify_origin_tracking
 
+    # if previous and latest version are equal, then the previous previous release versions may be present
+    if [[ $PREVIOUS_VERSION == "$LATEST_VERSION" ]]; then
+      echo "PREVIOUS_VERSION  was: $PREVIOUS_VERSION"
+      PREVIOUS_VERSION=$(git describe --abbrev=0 --tags `git rev-list --tags --skip=2 --max-count=1` | cut -b 2-)
+      echo "PREVIOUS_VERSION  is now: $PREVIOUS_VERSION"
+    fi
+
+    determine_inc $PREVIOUS_VERSION $LATEST_VERSION
+
     echo -e "🥑 Attempting to create a release prep branch and PR with release version updates.\n   Previous version: $PREVIOUS_VERSION ---> Latest version: $LATEST_VERSION"
     create_release_branch
     update_versions
@@ -244,3 +307,5 @@ main() {
 }
 
 main "$@"
+
+set +x
