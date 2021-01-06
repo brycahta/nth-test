@@ -284,11 +284,27 @@ handle_errors() {
     exit $1
 }
 
+sync_local_tags_from_remote() {
+    # setup remote upstream tracking to fetch tags
+    git remote add the-real-upstream https://github.com/brycahta/nth-test.git &> /dev/null || true
+    git fetch the-real-upstream
+
+    # delete all local tags
+    git tag -l | xargs git tag -d
+
+    # fetch remote tags
+    git fetch the-real-upstream --tags
+
+    # clean up tracking
+    git remote remove the-real-upstream
+}
+
 main() {
     process_args "$@"
     trap 'handle_errors $? $BASH_COMMAND' EXIT
 
     verify_origin_tracking
+    sync_local_tags_from_remote
 
     # if previous and latest version are equal, then the previous previous release versions may be present
     if [[ $PREVIOUS_VERSION == "$LATEST_VERSION" ]]; then
