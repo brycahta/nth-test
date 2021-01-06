@@ -145,9 +145,9 @@ helm-tests: helm-version-sync-test helm-lint helm-validate-eks-versions
 eks-cluster-test:
 	${MAKEFILE_PATH}/test/eks-cluster-test/run-test
 
-release: build-binaries build-docker-images generate-k8s-yaml upload-resources-to-github
+release: build-binaries build-docker-images generate-k8s-yaml
 
-release-windows: build-binaries-windows build-docker-images-windows upload-resources-to-github-windows
+release-windows: build-binaries-windows build-docker-images-windows
 
 test: spellcheck shellcheck unit-test e2e-test compatibility-test license-test go-report-card-test helm-sync-test helm-version-sync-test helm-lint
 

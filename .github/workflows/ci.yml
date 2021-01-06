@@ -174,8 +174,5 @@ jobs:
     - name: Create eks-charts PR
       run: make ekscharts-sync-release
     
-    - name: Sync Readme to Dockerhub
-      run: make sync-readme-to-dockerhub
-    
     - name: Create NTH README Update PR
       run: make create-release-prep-pr-readme
