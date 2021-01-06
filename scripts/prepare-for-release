@@ -293,6 +293,8 @@ main() {
     # if previous and latest version are equal, then the previous previous release versions may be present
     if [[ $PREVIOUS_VERSION == "$LATEST_VERSION" ]]; then
       echo "PREVIOUS_VERSION  was: $PREVIOUS_VERSION"
+      all_versions=$(git tag -l --sort=-v:refname)
+      echo "all_versions: $all_versions"
       PREVIOUS_VERSION=$(git tag -l --sort=-v:refname | sed -n '2 p' | cut -b 2-)
       echo "PREVIOUS_VERSION  is now: $PREVIOUS_VERSION"
     fi
