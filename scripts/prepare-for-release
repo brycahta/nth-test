@@ -293,7 +293,7 @@ main() {
     # if previous and latest version are equal, then the previous previous release versions may be present
     if [[ $PREVIOUS_VERSION == "$LATEST_VERSION" ]]; then
       echo "PREVIOUS_VERSION  was: $PREVIOUS_VERSION"
-      PREVIOUS_VERSION=$(git describe --abbrev=0 --tags `git rev-list --tags --skip=2 --max-count=1` | cut -b 2-)
+      PREVIOUS_VERSION=$(git describe --abbrev=0 --tags "$(git rev-list --tags --skip=2 --max-count=1)" | cut -b 2-)
       echo "PREVIOUS_VERSION  is now: $PREVIOUS_VERSION"
     fi
 
