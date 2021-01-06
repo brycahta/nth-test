@@ -8,6 +8,8 @@
 
 set -euo pipefail
 
+set -x
+
 REPO_ROOT_PATH="$( cd "$(dirname "$0")"; cd ../; pwd -P )"
 MAKEFILE_PATH=$REPO_ROOT_PATH/Makefile
 LATEST_VERSION=$(make -s -f $MAKEFILE_PATH latest-release-tag | cut -b 2- )
@@ -180,8 +182,8 @@ update_versions() {
         has_incorrect_version=$(cat $f | grep $PREVIOUS_VERSION || [[ $? == 1 ]])
         chart_should_increment=$(cat $f | grep $CURR_CHART_VERSION || [[ $? == 1 ]])
         if [[ ! -z  $has_incorrect_version ]] || [[ ! -z  $chart_should_increment ]]; then
-            sed -i '' "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
-            sed -i '' "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" $f
+            sed -i '' "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" "$f"
+            sed -i '' "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" "$f"
             FILES_CHANGED+=("$f")
         fi
     done
@@ -325,3 +327,5 @@ main() {
 }
 
 main "$@"
+
+set +x
