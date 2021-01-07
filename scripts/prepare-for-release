@@ -17,6 +17,7 @@ PREVIOUS_VERSION=$(make -s -f $MAKEFILE_PATH previous-release-tag | cut -b 2- )
 MAJOR_INC=false
 MINOR_INC=false
 PATCH_INC=false
+os=$(uname)
 
 # files with versions, to update
 REPO_README=$REPO_ROOT_PATH/README.md
@@ -108,7 +109,7 @@ RESET_FMT=$(tput sgr 0)
 BOLD=$(tput bold)
 
 
-determine_inc() {
+determine_increment() {
   prev=$1
   updated=$2
 
@@ -126,10 +127,6 @@ determine_inc() {
   elif [[ "$prev_patch_v" -ne "$curr_patch_v" ]]; then
     PATCH_INC=true
   fi
-
-  echo "$MAJOR_INC"
-  echo "$MINOR_INC"
-  echo "$PATCH_INC"
 }
 
 increment_chart() {
@@ -184,10 +181,13 @@ update_versions() {
         has_incorrect_version=$(cat $f | grep $PREVIOUS_VERSION || [[ $? == 1 ]])
         chart_should_increment=$(cat $f | grep $CURR_CHART_VERSION || [[ $? == 1 ]])
         if [[ ! -z  $has_incorrect_version ]] || [[ ! -z  $chart_should_increment ]]; then
-            #sed -i '' "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" "$f"
-            sed -i "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
-            sed -i "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" $f
-            #sed -i '' "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" "$f"
+            if [[ "${os}" = "Linux" ]]; then
+              sed -i "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
+              sed -i "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" $f
+            elif [[ "${os}" = "Darwin" ]]; then
+              sed -i '' "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
+              sed -i '' "s/$CURR_CHART_VERSION/$UPDATED_CHART_VERSION/g" $f
+            fi
             FILES_CHANGED+=("$f")
         fi
     done
@@ -300,7 +300,7 @@ handle_errors() {
 
 sync_local_tags_from_remote() {
     # setup remote upstream tracking to fetch tags
-    git remote add the-real-upstream https://github.com/brycahta/nth-test.git &> /dev/null || true
+    git remote add the-real-upstream  https://github.com/brycahta/nth-test.git &> /dev/null || true
     git fetch the-real-upstream
 
     # delete all local tags
@@ -322,14 +322,10 @@ main() {
 
     # if previous and latest version are equal, then the previous previous release versions may be present
     if [[ $PREVIOUS_VERSION == "$LATEST_VERSION" ]]; then
-      echo "PREVIOUS_VERSION  was: $PREVIOUS_VERSION"
-      all_versions=$(git tag -l --sort=-v:refname)
-      echo "all_versions: $all_versions"
       PREVIOUS_VERSION=$(git tag -l --sort=-v:refname | sed -n '2 p' | cut -b 2-)
-      echo "PREVIOUS_VERSION  is now: $PREVIOUS_VERSION"
     fi
 
-    determine_inc $PREVIOUS_VERSION $LATEST_VERSION
+    determine_increment $PREVIOUS_VERSION $LATEST_VERSION
 
     echo -e "🥑 Attempting to create a release prep branch and PR with release version updates.\n   Previous version: $PREVIOUS_VERSION ---> Latest version: $LATEST_VERSION"
     create_release_branch
